@@ -19,6 +19,10 @@ export default {
   // Global CSS: https://go.nuxtjs.dev/config-css
   css: [
   ],
+  
+  proxy: {
+    '/itunes_proxy/': { target: 'https://itunes.apple.com/', pathRewrite: {'^/itunes_proxy/': ''} },
+  },
 
   // Plugins to run before rendering page: https://go.nuxtjs.dev/config-plugins
   plugins: [
