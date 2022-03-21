@@ -1,122 +1,122 @@
 <template>
-    <div class="autocomplete">
-        <input type="text"
-            v-model="search"
-            @input="onChange"
-            @keydown.down="onArrowDown"
-            @keydown.up="onArrowUp"
-            @keydown.enter="onEnter"
-        />
-        <ul class="autocomplete-results" v-show="isOpen">
-            <li
-                v-for="(result, index) in results" :key="index"
-                @click="setResult(result)"
-                class="autocomplete-result"
-                :class="{ 'is-active': index === arrowCounter }"
-            >{{ result }}</li>
+    <div>
+        <div class="flex px-2 py-1 mx-auto border-2 border-green-400 rounded w-96">
+            <input type="text" class="block w-full outline-none"
+                v-model="search"
+                @input="onChange"
+            />
+            <iconSearch css="h-6 w-6" />
+        </div>
+        
+        <ul class="mx-auto mt-2 w-96" v-show="isOpen">
+            <li class="px-2 border border-gray-500 rounded bg-gray-50" v-if="isLoading">Loading results...</li>
+            <ul class="border-2 border-green-400 rounded" v-else>
+                <li class="px-2 text-sm font-semibold bg-green-200">Artists</li>
+                <li
+                    v-for="(artist) in artists.slice(0, 3)" :key="artist.id"
+                    @click="setResult(artist)"
+                    class="px-2 hover:bg-green-100"
+                >- {{ artist.name }}</li>
+
+                <li class="px-2 mt-2 text-sm font-semibold bg-green-200">Albums</li>
+                <li
+                    v-for="(album) in albums.slice(0, 3)" :key="album.id"
+                    @click="setResult(album)"
+                    class="px-2 hover:bg-green-100"
+                >- {{ album.name }}</li>
+
+                <li class="px-2 mt-2 text-sm font-semibold bg-green-200">Songs</li>
+                <li
+                    v-for="(song) in songs.slice(0, 3)" :key="song.id"
+                    @click="setResult(song)"
+                    class="px-2 hover:bg-green-100"
+                >- {{ song.name }}</li>
+            </ul>
         </ul>
     </div>
 </template>
 
+
 <script>
+import iconSearch from "../icons/iconSearch.vue"
+
 export default {
-    mounted() {
-        document.addEventListener('click', this.handleClickOutside);
+    mounted () {
+        document.addEventListener("click", this.handleClickOutside)
     },
 
-    destroyed() {
-        document.removeEventListener('click', this.handleClickOutside);
+    destroyed () {
+        document.removeEventListener("click", this.handleClickOutside)
+    },
+
+    components: {
+        iconSearch
     },
 
     data () {
         return {
-            search: '',
-            items: [
-                'Apple',
-                'Banana',
-                'Orange',
-                'Mango',
-                'Pear',
-                'Peach',
-                'Grape',
-                'Tangerine',
-                'Pineapple'
-            ],
+            search: "",
             isOpen: false,
             results: [],
-            arrowCounter: -1,
         }
     },
 
+    computed: {
+        isLoading () { return this.$store.getters["isLoading"] },
+        artists () { return this.$store.getters["artists"] },
+        albums () { return this.$store.getters["albums"] },
+        songs () { return this.$store.getters["songs"] },
+    },
+
     methods: {
-        filterResults() {
-            this.results = this.items.filter(item => item.toLowerCase().indexOf(this.search.toLowerCase()) > -1)
-        },
-        
-        onChange() {
-            this.filterResults()
-            if (this.search.length > 0) this.isOpen = true
+        onChange () {
+            if (this.search.length > 1) {
+                this.$store.dispatch("setIsLoading", true)
+                this.isOpen = true
+                this.$store.dispatch("getSuggestions", this.search)
+            }
             else this.isOpen = false
         },
         
-        setResult(result) {
-            this.search = result
+        setResult (searchResult) {
+            this.search = searchResult.name
             this.isOpen = false
+            this.$store.dispatch("setUserChoice", searchResult)
+
+            let otherResults = null
+            if (searchResult.type === "artist") otherResults = this.artists
+            else if (searchResult.type === "album") otherResults = this.albums
+            else if (searchResult.type === "song") otherResults = this.songs
+            otherResults = otherResults.filter(result => { return result.id !== searchResult.id })
+
+            this.$store.dispatch("setUserChoice", searchResult)
+            this.$store.dispatch("setOtherResultsOfType", otherResults)
         },
-        
-        handleClickOutside(event) {
-            if (!this.$el.contains(event.target)) {
-                this.arrowCounter = -1
-                this.isOpen = false
+
+        handleClickOutside (event) {
+            if (!this.$el.contains(event.target)) this.isOpen = false
+        }
+    },
+
+    watch: {
+        artists: function (value, oldValue) {
+            if (value.length !== oldValue.length) {
+                this.results = value
+                this.$store.dispatch("setIsLoading", false)
             }
         },
-        
-        onArrowDown() {
-            if (this.arrowCounter < this.results.length) {
-                this.arrowCounter = this.arrowCounter + 1;
+        albums: function (value, oldValue) {
+            if (value.length !== oldValue.length) {
+                this.results = value
+                this.$store.dispatch("setIsLoading", false)
             }
         },
-        
-        onArrowUp() {
-            if (this.arrowCounter > 0) {
-                this.arrowCounter = this.arrowCounter - 1;
+        songs: function (value, oldValue) {
+            if (value.length !== oldValue.length) {
+                this.results = value
+                this.$store.dispatch("setIsLoading", false)
             }
-        },
-        
-        onEnter() {
-            this.search = this.results[this.arrowCounter];
-            this.arrowCounter = -1;
-            this.isOpen = false;
         }
     }
 }
 </script>
-
-<style>
-    .autocomplete {
-        position: relative;
-    }
-
-    .autocomplete-results {
-        padding: 0;
-        margin: 0;
-        border: 1px solid #eeeeee;
-        height: 120px;
-        min-height: 1em;
-        max-height: 6em;    
-        overflow: auto;
-    }
-
-    .autocomplete-result {
-        list-style: none;
-        text-align: left;
-        padding: 4px 2px;
-        cursor: pointer;
-    }
-
-    .autocomplete-result.is-active,
-    .autocomplete-result:hover {
-        background-color: #4AAE9B;
-        color: white;
-    }
-</style>
