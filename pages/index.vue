@@ -1,7 +1,15 @@
 <template>
-  <Tutorial/>
+    <div>
+        <searchbar />
+    </div>
 </template>
 
 <script>
-export default {}
+import searchbar from '@/components/ui/searchbar'
+
+export default {
+    components: {
+        searchbar
+    }
+}
 </script>
